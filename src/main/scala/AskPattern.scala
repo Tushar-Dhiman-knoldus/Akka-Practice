@@ -26,7 +26,6 @@ object AskPatternExample extends App{
 
     println(s"Question: $question")
     println(s"Answer: $answer")
-
     system.terminate()
 
 }
