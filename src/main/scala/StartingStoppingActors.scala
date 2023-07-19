@@ -1,5 +1,5 @@
 import StartingStoppingActors.Parent.StartChild
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Kill, PoisonPill, Props}
 
 object StartingStoppingActors extends App{
 
@@ -38,6 +38,11 @@ object StartingStoppingActors extends App{
     }
   }
 
+  /**
+   * Method-1
+   * using context.stop
+   */
+
   import Parent._
   val parent = system.actorOf(Props[Parent],"parent")
   parent ! StartChild("child1")
@@ -54,5 +59,20 @@ object StartingStoppingActors extends App{
   child2 ! "hi, second child"
   parent ! Stop
   for(_ <-1 to 10) parent ! "parent,are you still there"
-  for(i <-1 to 100) parent ! s"[$i]Second kid, are you still alive?"
+  for(i <-1 to 100) parent ! s"[$i]Second kid, are you still alive? "
+
+  /**
+   *method -2
+   * using special messages
+   */
+
+  val looserActor = system.actorOf(Props[Child])
+  looserActor ! "hello, looser Actor!"
+  looserActor ! PoisonPill
+  looserActor ! "looser actor, are you still there"
+
+  val abruptlyTerminatedActor = system.actorOf(Props[Child])
+  abruptlyTerminatedActor ! "you are about to terminated !"
+  abruptlyTerminatedActor ! Kill
+  abruptlyTerminatedActor ! "you have been terminated"
 }
