@@ -1,5 +1,4 @@
-import StartingStoppingActors.Parent.StartChild
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Kill, PoisonPill, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Kill, PoisonPill, Props, Terminated}
 
 object StartingStoppingActors extends App{
 
@@ -42,37 +41,64 @@ object StartingStoppingActors extends App{
    * Method-1
    * using context.stop
    */
-
-  import Parent._
-  val parent = system.actorOf(Props[Parent],"parent")
-  parent ! StartChild("child1")
-  val child = system.actorSelection("user/parent/child1")
-  child ! "hi, kid!"
-
-  parent ! StopChild("child1")
-
-//  for(_ <- 1 to 50) child ! "are you still there ?"
-
-  parent ! StartChild("child2")
-
-  val child2 = system.actorSelection("user/parent/child2")
-  child2 ! "hi, second child"
-  parent ! Stop
-  for(_ <-1 to 10) parent ! "parent,are you still there"
-  for(i <-1 to 100) parent ! s"[$i]Second kid, are you still alive? "
+//
+//  import Parent._
+//  val parent = system.actorOf(Props[Parent],"parent")
+//  parent ! StartChild("child1")
+//  val child = system.actorSelection("user/parent/child1")
+//  child ! "hi, kid!"
+//
+//  parent ! StopChild("child1")
+//
+////  for(_ <- 1 to 50) child ! "are you still there ?"
+//
+//  parent ! StartChild("child2")
+//
+//  val child2 = system.actorSelection("user/parent/child2")
+//  child2 ! "hi, second child"
+//  parent ! Stop
+//  for(_ <-1 to 10) parent ! "parent,are you still there"
+//  for(i <-1 to 100) parent ! s"[$i]Second kid, are you still alive? "
 
   /**
    *method -2
    * using special messages
    */
 
-  val looserActor = system.actorOf(Props[Child])
-  looserActor ! "hello, looser Actor!"
-  looserActor ! PoisonPill
-  looserActor ! "looser actor, are you still there"
+//  val looserActor = system.actorOf(Props[Child])
+//  looserActor ! "hello, looser Actor!"
+//  looserActor ! PoisonPill
+//  looserActor ! "looser actor, are you still there"
+//
+//  val abruptlyTerminatedActor = system.actorOf(Props[Child])
+//  abruptlyTerminatedActor ! "you are about to terminated !"
+//  abruptlyTerminatedActor ! Kill
+//  abruptlyTerminatedActor ! "you have been terminated"
 
-  val abruptlyTerminatedActor = system.actorOf(Props[Child])
-  abruptlyTerminatedActor ! "you are about to terminated !"
-  abruptlyTerminatedActor ! Kill
-  abruptlyTerminatedActor ! "you have been terminated"
+
+  /**
+   * Death Watch
+   */
+
+  class Watcher extends Actor with ActorLogging{
+    import Parent._
+
+    override def receive: Receive = {
+      case StartChild(name) =>
+        val child = context.actorOf(Props[Child], name)
+        context.watch(child)
+      case Terminated(ref)=>
+        log.info(s"the reference that I'm watching $ref has been stopped")
+    }
+  }
+
+  import Parent._
+
+  val watcher = system.actorOf(Props[Watcher],"Watcher")
+  watcher ! StartChild("watchedChild")
+  val watchedChild = system.actorSelection("/user/watcher/watchedChild")
+  Thread.sleep(500)
+
+  watchedChild ! PoisonPill
+
 }
